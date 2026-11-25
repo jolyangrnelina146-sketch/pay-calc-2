@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>알바비·세금 계산기</title>
+<meta name="description" content="알바비·주휴수당, 3.3% 원천징수, 부가세, 4대보험·월급 실수령, 퇴직금을 한 곳에서 계산합니다.">
+<style>
+:root{--bg:#f6f5f1;--fg:#1f1f1d;--mute:#6f6d66;--line:#e2e0d8;--card:#fff;--acc:#c2410c;--accfg:#fff;--soft:#fbf1ea;--neg:#b91c1c;--warn:#fff4d6;--warnfg:#6b4a00}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1b19;--fg:#f0eee8;--mute:#a19e95;--line:#34332f;--card:#252421;--acc:#fb923c;--accfg:#1b1b19;--soft:#33291f;--neg:#f87171;--warn:#3d3416;--warnfg:#f3d98a}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1b19;--fg:#f0eee8;--mute:#a19e95;--line:#34332f;--card:#252421;--acc:#fb923c;--accfg:#1b1b19;--soft:#33291f;--neg:#f87171;--warn:#3d3416;--warnfg:#f3d98a}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 -apple-system,"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header,main{max-width:980px;margin:0 auto;padding:0 16px}
+header{padding-top:22px}
+h1{font-size:22px;margin:0}
+.sub{color:var(--mute);margin:2px 0 14px;font-size:14px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:0 16px 10px;max-width:980px;margin:0 auto;scrollbar-width:none}
+nav button{flex:0 0 auto;font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:7px 14px;white-space:nowrap}
+nav button[aria-selected=true]{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:700}
+.panel{display:none;gap:14px;padding-bottom:30px}
+.panel.on{display:grid;grid-template-columns:1fr}
+@media(min-width:800px){.panel.on{grid-template-columns:1fr 1fr;align-items:start}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-size:16px;margin:0 0 12px}
+.f{display:block;margin-bottom:12px}
+.f>span{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+.f small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.in{display:flex;align-items:center;gap:6px}
+.in em{font-style:normal;color:var(--mute);font-size:14px;min-width:2.2em}
+input[type=text],input[type=date],select{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;min-height:44px}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:0}
+.chk{display:flex;gap:8px;align-items:center;margin:4px 0 12px;min-height:30px}
+.chk input{width:20px;height:20px;accent-color:var(--acc)}
+details{margin-top:6px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;color:var(--mute);font-size:14px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+td{padding:7px 0;border-bottom:1px solid var(--line);font-size:14.5px;vertical-align:top}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:10px}
+tr.sec td{color:var(--mute);font-size:12.5px;padding-top:14px;border-bottom:1px solid var(--line)}
+tr.tot td{font-weight:800;font-size:17px;border-bottom:0;padding-top:12px}
+tr.tot td:last-child{color:var(--acc)}
+tr.neg td:last-child{color:var(--neg)}
+.warn{background:var(--warn);color:var(--warnfg);border-radius:9px;padding:9px 11px;font-size:13.5px;margin-bottom:10px}
+.note{color:var(--mute);font-size:12.5px;margin-top:12px}
+.btns{display:flex;gap:8px;margin-top:14px}
+.btns button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:9px 14px;min-height:44px}
+.btns button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:700}
+footer{max-width:980px;margin:0 auto;padding:0 16px 40px;color:var(--mute);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>알바비·세금 계산기</h1>
+  <p class="sub">입력하면 바로 계산됩니다. 입력한 내용은 이 브라우저 밖으로 나가지 않습니다.</p>
+</header>
+<nav id="tabs" role="tablist"></nav>
+<main id="panels"></main>
+<footer>
+  기준: 2026년(요율은 매년 바뀌므로 4대보험 탭의 '요율 설정'에서 확인·수정). 계산 결과는 참고용이며,
+  실제 신고·원천징수는 국세청 간이세액표와 관련 법령, 세무 전문가의 확인을 거치세요.
+</footer>
+<script>
+const WEEKS=4.345, MIN_WAGE=10320;
+const $=s=>document.querySelector(s);
+const val=id=>{const el=document.getElementById(id);if(!el)return 0;if(el.type==='checkbox')return el.checked;if(el.tagName==='SELECT'||el.type==='date')return el.value;const v=parseFloat(String(el.value).replace(/[^\d.\-]/g,''));return isFinite(v)?v:0};
+const fl=(n,u=1)=>Math.floor(n/u+1e-9)*u;
+const won=n=>Math.round(n).toLocaleString('ko-KR')+'원';
+const hr=n=>(Math.round(n*100)/100).toLocaleString('ko-KR')+'시간';
+const pct=n=>(Math.round(n*1000)/1000)+'%';
+const clamp=(n,a,b)=>Math.min(Math.max(n,a),b);
+
+/* ---------- 4대보험 / 소득세 공통 ---------- */
+function rates(){return{np:val('i_np'),hi:val('i_hi'),ltc:val('i_ltc'),ei:val('i_ei'),eiEmp:val('i_eiemp'),npMin:val('i_npmin'),npMax:val('i_npmax')}}
+function calcIns(base){
+  const R=rates(); if(base<=0)return{np:0,hi:0,ltc:0,ei:0,sum:0};
+  const np=fl(clamp(base,R.npMin,R.npMax)*R.np/100,10);
+  const hi=fl(base*R.hi/100,10);
+  const ltc=fl(hi*R.ltc/100,10);
+  const ei=fl(base*R.ei/100,10);
+  return{np,hi,ltc,ei,sum:np+hi+ltc+ei};
+}
+function earnedDed(s){if(s<=5e6)return s*.7;if(s<=15e6)return 3.5e6+(s-5e6)*.4;if(s<=45e6)return 7.5e6+(s-15e6)*.15;if(s<=1e8)return 12e6+(s-45e6)*.05;return Math.min(14.75e6+(s-1e8)*.02,2e7)}
+function bracketTax(t){const B=[[14e6,.06,0],[50e6,.15,1.26e6],[88e6,.24,5.76e6],[150e6,.35,15.44e6],[300e6,.38,19.94e6],[500e6,.40,25.94e6],[1e9,.42,35.94e6],[Infinity,.45,65.94e6]];for(const[m,r,d]of B)if(t<=m)return Math.max(0,t*r-d);return 0}
+function taxCredit(tax,s){const c=tax<=1.3e6?tax*.55:715000+(tax-1.3e6)*.3;const lim=s<=33e6?740000:s<=70e6?Math.max(660000,740000-(s-33e6)*.008):s<=120e6?Math.max(500000,660000-(s-70e6)*.5):Math.max(200000,500000-(s-120e6)*.5);return Math.min(c,lim)}
+function monthlyIncomeTax(monthlyTaxable,insMonthly,fam){
+  const s=monthlyTaxable*12; if(s<=0)return 0;
+  const base=Math.max(0,s-earnedDed(s)-1.5e6*fam-insMonthly*12);
+  const t=bracketTax(base); const fin=Math.max(0,t-taxCredit(t,s));
+  return fl(fin/12,10);
+}
+
+/* ---------- 원천징수 ---------- */
+function withhold(type,g,eiOn){
+  if(type==='biz'){const tax=fl(g*.03);return{tax,local:fl(tax*.1,10),ei:0}}
+  if(type==='other'){const inc=g*.4;if(inc<=50000)return{tax:0,local:0,ei:0};const tax=fl(inc*.2);return{tax,local:fl(tax*.1,10),ei:0}}
+  let tax=fl(Math.max(0,g-150000)*.06*.45); if(tax<1000)tax=0;
+  return{tax,local:fl(tax*.1,10),ei:eiOn?fl(g*.009):0};
+}
+function findGross(type,target,eiOn){
+  let g=target;for(let i=0;i<30;i++){const w=withhold(type,g,eiOn);g=target+w.tax+w.local+w.ei}
+  let exact=-1,first=-1;
+  for(let x=Math.max(0,g-400);x<=g+400;x++){const w=withhold(type,x,eiOn),n=x-w.tax-w.local-w.ei;if(n===target)exact=x;if(first<0&&n>=target)first=x}
+  return exact>=0?exact:(first>=0?first:g);
+}
+
+/* ---------- 탭 정의 ---------- */
+const row=(l,v,c)=>({l,v,c});
+const sec=l=>({l,v:'',c:'sec'});
+const TABS=[
+{id:'wage',name:'알바비·주휴수당',title:'알바비·주휴수당',fields:[
+ {id:'w_wage',label:'시급',val:MIN_WAGE,unit:'원',fmt:1,hint:'2026년 최저시급 10,320원'},
+ {id:'w_days',label:'주 근무일수',val:5,unit:'일'},
+ {id:'w_hours',label:'하루 근무시간 (휴게시간 제외)',val:8,unit:'시간'},
+ {id:'w_full',type:'check',label:'소정근로일을 개근함 (주휴수당 조건)',val:true},
+ {id:'w_five',type:'check',label:'5인 이상 사업장 (연장·야간·휴일 가산 적용)',val:true},
+ {id:'w_ot',label:'추가 연장근로 (월 합계)',val:0,unit:'시간'},
+ {id:'w_night',label:'야간근로 22~06시 (월 합계)',val:0,unit:'시간',hint:'기본 근무 중 야간에 일한 시간. 가산분(0.5배)만 더해집니다.'},
+ {id:'w_hol',label:'휴일근로 (월 합계)',val:0,unit:'시간'},
+ {id:'w_ded',type:'select',label:'공제 방식',val:'none',opts:[['none','공제 없음 (세전)'],['biz','3.3% 원천징수'],['ins','4대보험 (근로자 부담)']]}
+],calc(){
+ const w=val('w_wage'),weekly=val('w_days')*val('w_hours'),five=val('w_five'),full=val('w_full');
+ const reg=Math.min(weekly,40),otAuto=Math.max(0,weekly-40);
+ const holiH=full&&weekly>=15?Math.min(weekly,40)/40*8:0;
+ const m=five?1.5:1;
+ const base=fl(w*reg*WEEKS),holi=fl(w*holiH*WEEKS),otA=fl(w*otAuto*WEEKS*m),otX=fl(w*val('w_ot')*m);
+ const night=five?fl(w*.5*val('w_night')):0,hol=fl(w*m*val('w_hol'));
+ const gross=base+holi+otA+otX+night+hol;
+ const monthH=(reg+holiH+otAuto)*WEEKS;
+ const rows=[sec('주 기준'),row('주 소정근로시간',hr(weekly)),row('주휴시간 (주당)',hr(holiH)),row('주휴수당 (주당)',won(w*holiH)),
+  sec('월 급여 (월 4.345주 환산)'),row('기본급',won(base)),row('주휴수당',won(holi))];
+ if(otA)rows.push(row('주 40시간 초과분',won(otA)));
+ if(otX)rows.push(row('추가 연장근로',won(otX)));
+ if(night)rows.push(row('야간 가산',won(night)));
+ if(hol)rows.push(row('휴일근로',won(hol)));
+ rows.push(row('세전 월급여',won(gross),'tot'));
+ const d=val('w_ded');let net=gross;
+ if(d==='biz'){const tax=fl(gross*.03),loc=fl(tax*.1,10);rows.push(sec('공제'),row('소득세 3%',won(tax),'neg'),row('지방소득세 0.3%',won(loc),'neg'));net=gross-tax-loc}
+ if(d==='ins'){const i=calcIns(gross);rows.push(sec('공제 (4대보험)'),row('국민연금',won(i.np),'neg'),row('건강보험',won(i.hi),'neg'),row('장기요양',won(i.ltc),'neg'),row('고용보험',won(i.ei),'neg'));net=gross-i.sum}
+ if(d!=='none')rows.push(row('실수령액',won(net),'tot'));
+ rows.push(sec('참고'),row('월 환산 근로시간',hr(monthH)),row('주휴 포함 실질 시급',won(monthH?gross/monthH:0)));
+ let warn=[];
+ if(w&&w<MIN_WAGE)warn.push('입력한 시급이 2026년 최저시급(10,320원)보다 낮습니다.');
+ if(weekly<15)warn.push('주 15시간 미만이라 주휴수당이 없습니다.');
+ else if(!full)warn.push('개근하지 않으면 해당 주의 주휴수당이 없습니다.');
+ if(d==='ins'&&monthH<60)warn.push('월 60시간 미만이면 국민연금·건강보험 가입 대상이 아닐 수 있습니다.');
+ return{rows,warn,note:'주휴수당 = 시급 × (주 소정근로시간 ÷ 40 × 8시간). 주 40시간 이상이면 8시간, 15시간 미만이면 없음.'};
+}},
+{id:'tax',name:'3.3%·원천징수',title:'원천징수 세금 계산',fields:[
+ {id:'t_type',type:'select',label:'소득 종류',val:'biz',opts:[['biz','사업소득 3.3% (프리랜서)'],['other','기타소득 8.8%'],['daily','일용근로소득']]},
+ {id:'t_dir',type:'select',label:'계산 방향',val:'fwd',opts:[['fwd','세전 금액 → 실수령액'],['rev','받고 싶은 실수령액 → 세전 금액']]},
+ {id:'t_amt',label:'금액 (일용근로는 하루 일당)',val:1000000,unit:'원',fmt:1},
+ {id:'t_days',label:'근무일수 (일용근로만)',val:1,unit:'일'},
+ {id:'t_ei',type:'check',label:'고용보험 0.9% 공제 (일용근로만)',val:true}
+],calc(){
+ const type=val('t_type'),amt=val('t_amt'),days=Math.max(1,val('t_days')),ei=val('t_ei');
+ const g=val('t_dir')==='rev'?findGross(type,amt,ei):amt;
+ const w=withhold(type,g,ei),n=type==='daily'?days:1;
+ const tax=w.tax*n,loc=w.local*n,e=w.ei*n,gross=g*n,net=gross-tax-loc-e;
+ const rows=[row(type==='daily'?'총 지급액 (일당×일수)':'세전 금액',won(gross)),row('소득세',won(tax),'neg'),row('지방소득세',won(loc),'neg')];
+ if(type==='daily')rows.push(row('고용보험',won(e),'neg'));
+ rows.push(row('총 공제액',won(tax+loc+e),'neg'),row('실수령액',won(net),'tot'));
+ if(type==='daily')rows.push(sec('참고'),row('일당',won(g)));
+ const notes={biz:'소득세 3% + 지방소득세(소득세의 10%) 0.3% = 3.3%',other:'필요경비 60% 인정 후 소득금액 20% 세율 = 8.8%. 소득금액 5만원 이하(지급액 12.5만원 이하)면 원천징수 안 함.',daily:'일당에서 15만원 공제 후 6% 세율, 55% 세액공제(실효 2.7%), 지방소득세 10% 별도. 소득세가 1,000원 미만이면 소액부징수(일당 약 18.7만원 이하).'};
+ return{rows,warn:[],note:notes[type]};
+}},
+{id:'vat',name:'부가세',title:'부가가치세 계산',fields:[
+ {id:'v_dir',type:'select',label:'입력 기준',val:'supply',opts:[['supply','공급가액 입력 → 부가세 더하기'],['total','합계금액(부가세 포함) 입력 → 부가세 빼기']]},
+ {id:'v_amt',label:'금액',val:1000000,unit:'원',fmt:1},
+ {id:'v_rate',label:'세율',val:10,unit:'%'}
+],calc(){
+ const a=val('v_amt'),r=val('v_rate')/100;let supply,vat,total;
+ if(val('v_dir')==='supply'){supply=a;vat=Math.round(a*r);total=supply+vat}
+ else{total=a;supply=Math.round(a/(1+r));vat=total-supply}
+ return{rows:[row('공급가액',won(supply)),row('부가세 ('+pct(r*100)+')',won(vat)),row('합계금액',won(total),'tot')],warn:[],note:'원 미만 반올림. 실제 세금계산서 금액과 1원 차이가 날 수 있습니다.'};
+}},
+{id:'ins',name:'월급·4대보험',title:'월급 실수령액 · 4대보험',fields:[
+ {id:'i_pay',label:'월 급여 총액 (세전)',val:3000000,unit:'원',fmt:1},
+ {id:'i_free',label:'비과세 금액 (식대 등)',val:200000,unit:'원',fmt:1,hint:'식대는 월 20만원까지 비과세'},
+ {id:'i_fam',label:'부양가족 수 (본인 포함)',val:1,unit:'명'},
+ {type:'details',label:'요율 설정 (2026년 기준, 바뀌면 수정)',fields:[
+  {id:'i_np',label:'국민연금 근로자 부담',val:4.75,unit:'%'},
+  {id:'i_hi',label:'건강보험 근로자 부담',val:3.595,unit:'%'},
+  {id:'i_ltc',label:'장기요양 (건강보험료 대비)',val:13.14,unit:'%'},
+  {id:'i_ei',label:'고용보험 근로자 부담',val:0.9,unit:'%'},
+  {id:'i_eiemp',label:'고용보험 사업주 부담 (150인 미만)',val:1.15,unit:'%'},
+  {id:'i_npmin',label:'국민연금 기준소득월액 하한',val:410000,unit:'원',fmt:1},
+  {id:'i_npmax',label:'국민연금 기준소득월액 상한',val:6590000,unit:'원',fmt:1}
+ ]}
+],calc(){
+ const pay=val('i_pay'),taxable=Math.max(0,pay-val('i_free')),i=calcIns(taxable);
+ const tax=monthlyIncomeTax(taxable,i.sum,Math.max(1,val('i_fam'))),loc=fl(tax*.1,10);
+ const ded=i.sum+tax+loc,R=rates();
+ const er={np:i.np,hi:i.hi,ltc:i.ltc,ei:fl(taxable*R.eiEmp/100,10)};
+ return{rows:[row('월 급여 총액',won(pay)),row('과세 대상 급여',won(taxable)),
+  sec('공제 (근로자)'),row('국민연금',won(i.np),'neg'),row('건강보험',won(i.hi),'neg'),row('장기요양',won(i.ltc),'neg'),row('고용보험',won(i.ei),'neg'),
+  row('근로소득세 (추정)',won(tax),'neg'),row('지방소득세 (추정)',won(loc),'neg'),row('총 공제액',won(ded),'neg'),
+  row('실수령액',won(pay-ded),'tot'),
+  sec('사업주 부담 (참고, 산재보험 제외)'),row('국민연금',won(er.np)),row('건강보험',won(er.hi)),row('장기요양',won(er.ltc)),row('고용보험(실업급여+고용안정)',won(er.ei)),
+  row('사업주 4대보험 합계',won(er.np+er.hi+er.ltc+er.ei),'tot')],
+  warn:[],note:'근로소득세는 연 환산 후 누진세율·공제를 적용한 추정치라 국세청 간이세액표와 몇천 원 차이가 날 수 있습니다. 자녀 공제 등은 반영하지 않았습니다.'};
+}},
+{id:'sev',name:'퇴직금',title:'퇴직금 계산',fields:[
+ {id:'s_in',type:'date',label:'입사일',val:'2024-01-01'},
+ {id:'s_out',type:'date',label:'퇴사일 (마지막 근무일)',val:'2026-11-30'},
+ {id:'s_pay3',label:'퇴사 전 3개월 임금 총액 (세전)',val:9000000,unit:'원',fmt:1,hint:'기본급 + 각종 수당 합계'},
+ {id:'s_bonus',label:'연간 상여금 (최근 1년)',val:0,unit:'원',fmt:1},
+ {id:'s_leave',label:'연차수당 (최근 1년 지급분)',val:0,unit:'원',fmt:1},
+ {id:'s_week',label:'주 소정근로시간',val:40,unit:'시간'}
+],calc(){
+ const a=new Date(val('s_in')),b=new Date(val('s_out'));
+ if(isNaN(a)||isNaN(b)||b<a)return{rows:[],warn:['입사일과 퇴사일을 확인해 주세요.'],note:''};
+ const DAY=864e5,days=Math.round((b-a)/DAY)+1;
+ const st=new Date(b);st.setMonth(st.getMonth()-3);const d3=Math.max(1,Math.round((b-st)/DAY));
+ const avg=(val('s_pay3')+val('s_bonus')*3/12+val('s_leave')*3/12)/d3;
+ const sev=Math.round(avg*30*days/365);
+ const warn=[];if(days<365)warn.push('재직기간이 1년 미만이라 퇴직금 지급 대상이 아닙니다.');
+ if(val('s_week')<15)warn.push('주 15시간 미만 근로자는 퇴직금 지급 대상이 아닙니다.');
+ return{rows:[row('재직일수',days.toLocaleString('ko-KR')+'일 ('+(days/365).toFixed(2)+'년)'),row('평균임금 산정 기간',d3+'일'),
+  row('1일 평균임금',won(avg)),row('퇴직금',won(sev),'tot')],warn,note:'퇴직금 = 1일 평균임금 × 30일 × 재직일수 ÷ 365. 1일 통상임금이 평균임금보다 높으면 통상임금 기준으로 계산합니다.'};
+}}
+];
+
+/* ---------- 렌더링 ---------- */
+function fieldHTML(f){
+ if(f.type==='details')return `<details><summary>${f.label}</summary>${f.fields.map(fieldHTML).join('')}</details>`;
+ if(f.type==='check')return `<label class="chk"><input type="checkbox" id="${f.id}" ${f.val?'checked':''}> ${f.label}</label>`;
+ if(f.type==='select')return `<label class="f"><span>${f.label}</span><select id="${f.id}">${f.opts.map(o=>`<option value="${o[0]}" ${o[0]===f.val?'selected':''}>${o[1]}</option>`).join('')}</select></label>`;
+ if(f.type==='date')return `<label class="f"><span>${f.label}</span><input type="date" id="${f.id}" value="${f.val}"></label>`;
+ const v=f.fmt?Number(f.val).toLocaleString('ko-KR'):f.val;
+ return `<label class="f"><span>${f.label}</span><div class="in"><input type="text" inputmode="decimal" id="${f.id}" value="${v}" ${f.fmt?'data-fmt="1"':''}><em>${f.unit||''}</em></div>${f.hint?`<small>${f.hint}</small>`:''}</label>`;
+}
+const tabsEl=$('#tabs'),panEl=$('#panels');
+TABS.forEach(t=>{
+ const b=document.createElement('button');b.textContent=t.name;b.setAttribute('role','tab');b.dataset.id=t.id;tabsEl.appendChild(b);
+ const p=document.createElement('section');p.className='panel';p.id='p_'+t.id;
+ p.innerHTML=`<div class="card"><h2>${t.title}</h2>${t.fields.map(fieldHTML).join('')}<div class="btns"><button type="button" data-reset="${t.id}">초기화</button></div></div>
+ <div class="card"><h2>계산 결과</h2><div id="warn_${t.id}"></div><table id="res_${t.id}"></table><div class="note" id="note_${t.id}"></div><div class="btns"><button type="button" class="p" data-copy="${t.id}">결과 복사</button></div></div>`;
+ panEl.appendChild(p);
+});
+const lastText={};
+function render(){
+ TABS.forEach(t=>{
+  let r;try{r=t.calc()}catch(e){r={rows:[],warn:['계산 중 오류가 났습니다. 입력값을 확인해 주세요.'],note:''}}
+  $('#res_'+t.id).innerHTML=r.rows.map(x=>`<tr class="${x.c||''}"><td>${x.l}</td><td>${x.v}</td></tr>`).join('');
+  $('#warn_'+t.id).innerHTML=r.warn.map(w=>`<div class="warn">⚠ ${w}</div>`).join('');
+  $('#note_'+t.id).textContent=r.note||'';
+  lastText[t.id]=t.title+'\n'+r.rows.filter(x=>x.c!=='sec').map(x=>x.l+': '+x.v).join('\n');
+ });
+}
+function show(id){
+ if(!TABS.some(t=>t.id===id))id=TABS[0].id;
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p_'+id));
+ tabsEl.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.id===id));
+ try{history.replaceState(null,'','#'+id)}catch(e){}
+}
+tabsEl.onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.id)};
+panEl.addEventListener('input',render);
+panEl.addEventListener('change',render);
+panEl.addEventListener('focusout',e=>{const el=e.target;if(el.dataset&&el.dataset.fmt){const v=val(el.id);el.value=v.toLocaleString('ko-KR')}});
+panEl.addEventListener('click',e=>{
+ const c=e.target.closest('[data-copy]'),r=e.target.closest('[data-reset]');
+ if(c){const txt=lastText[c.dataset.copy];const done=()=>{const o=c.textContent;c.textContent='복사됨 ✓';setTimeout(()=>c.textContent=o,1200)};
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(txt).then(done,()=>fallback(txt,done));else fallback(txt,done)}
+ if(r){const t=TABS.find(x=>x.id===r.dataset.reset);const all=[];(function walk(fs){fs.forEach(f=>f.type==='details'?walk(f.fields):all.push(f))})(t.fields);
+  all.forEach(f=>{const el=document.getElementById(f.id);if(f.type==='check')el.checked=!!f.val;else el.value=f.fmt?Number(f.val).toLocaleString('ko-KR'):f.val});render()}
+});
+function fallback(txt,done){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){}ta.remove()}
+render();show(location.hash.slice(1));
+addEventListener('hashchange',()=>show(location.hash.slice(1)));
+</script>
+</body>
+</html>
